@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PulseSense | PPG Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark">❤</div>
+          <div>
+            <div class="brand-name">PulseSense</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content simple-layout">
+        <section class="hero-simple">
+          <p class="eyebrow">Fingertip PPG analysis</p>
+          <h1>See your pulse, clearly.</h1>
+          <p class="subtitle">
+            Record from your connected Android webcam or upload a fingertip video to analyze its pulse.
+          </p>
+        </section>
+
+        <section class="camera-panel glass-card">
+          <div class="panel-head">
+            <h2>Record with a webcam</h2>
+            <p>Connect your Android phone to Windows as a webcam, select it below, and cover its camera and flash steadily.</p>
+          </div>
+          <div class="camera-controls">
+            <div class="camera-select-wrap">
+              <label for="cameraSelect" class="upload-label">Camera</label>
+              <select id="cameraSelect" disabled>
+                <option value="">Connect a camera to see devices</option>
+              </select>
+            </div>
+            <button class="secondary-btn" id="startCameraBtn">Enable camera</button>
+            <button class="secondary-btn" id="stopCameraBtn" disabled>Turn camera off</button>
+          </div>
+          <div class="camera-preview-wrap">
+            <video id="cameraPreview" autoplay muted playsinline aria-label="Camera preview"></video>
+            <p id="cameraPlaceholder" class="camera-placeholder">Camera preview will appear here</p>
+            <span id="recordingIndicator" class="recording-indicator" hidden>REC</span>
+          </div>
+          <div class="recording-controls">
+            <button class="primary-btn" id="startRecordingBtn" disabled>Start recording</button>
+            <button class="record-btn" id="stopRecordingBtn" disabled>Stop &amp; analyze</button>
+            <span id="recordingTimer" class="recording-timer" aria-label="Recording duration">00:00</span>
+          </div>
+          <p id="cameraStatus" class="status-text" role="status" aria-live="polite">
+            Camera access is requested only when you enable it.
+          </p>
+        </section>
+
+        <section class="upload-panel glass-card">
+          <div class="panel-head">
+            <h2>Or upload a video</h2>
+            <p>Use a steady recording with your fingertip covering the camera and flash.</p>
+          </div>
+          <label for="fileInput" class="upload-label">Choose a video (MP4, MOV, AVI, MKV, M4V, WebM)</label>
+          <input id="fileInput" type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,.m4v" />
+          <button class="primary-btn full" id="uploadFileBtn">Analyze video</button>
+          <p id="uploadStatus" class="status-text" role="status" aria-live="polite">
+            No video analyzed yet.
+          </p>
+        </section>
+
+        <section id="resultsPanel" class="results-panel" hidden aria-live="polite">
+          <div class="results-heading">
+            <div>
+              <p class="eyebrow">Analysis results</p>
+              <h2 id="resultTitle">PPG report</h2>
+              <p id="recordingDetails" class="muted"></p>
+            </div>
+          </div>
+
+          <article id="classificationCard" class="classification-card glass-card" aria-live="polite">
+            <div class="classification-heading">
+              <div>
+                <p class="card-label">Model rhythm category</p>
+                <p id="rhythmClass" class="rhythm-class">—</p>
+              </div>
+              <span class="classification-icon" aria-hidden="true">✦</span>
+            </div>
+            <div class="model-score">
+              <div class="model-score-label">
+                <span>Model probability</span>
+                <strong id="rhythmProbability">—</strong>
+              </div>
+              <div
+                id="rhythmProbabilityBar"
+                class="probability-track"
+                role="progressbar"
+                aria-label="Probability for the predicted rhythm category"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span id="rhythmProbabilityFill" class="probability-fill"></span>
+              </div>
+              <p id="classProbabilities" class="class-probabilities"></p>
+            </div>
+            <p class="classification-note">Class 0 is shown as Regular; Class 1 is shown as Irregular rhythm. This model result is informational, not a medical diagnosis.</p>
+          </article>
+
+          <div class="summary-grid">
+            <article class="summary-card glass-card">
+              <p class="card-label">Estimated heart rate</p>
+              <p class="bpm-value"><span id="meanBpm">—</span><span class="bpm-unit">BPM</span></p>
+              <p class="muted">Average from detected pulse intervals</p>
+            </article>
+            <article class="summary-card glass-card">
+              <p class="card-label">Spectrum cross-check</p>
+              <p class="bpm-value"><span id="spectralBpm">—</span><span class="bpm-unit">BPM</span></p>
+              <p class="muted">Independent estimate from signal frequency</p>
+            </article>
+          </div>
+
+          <section class="chart-card glass-card">
+            <div class="panel-head">
+              <h2>Pulse waveform</h2>
+              <p>Compare the extracted red-channel trace before and after filtering.</p>
+            </div>
+            <h3>Before filtering</h3>
+            <canvas id="rawChart" class="signal-chart" aria-label="Raw extracted PPG waveform"></canvas>
+            <h3>After filtering</h3>
+            <canvas id="filteredChart" class="signal-chart" aria-label="Filtered PPG waveform with detected beats"></canvas>
+          </section>
+
+          <section class="metrics-card glass-card">
+            <div class="panel-head">
+              <h2>HRV statistics</h2>
+              <p>Time-domain, frequency-domain, and Poincaré measures.</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">Measure</th><th scope="col">Value</th><th scope="col">Unit</th></tr></thead>
+                <tbody id="metricsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="warningsPanel" class="warnings-card" hidden>
+            <h2>Signal quality notes</h2>
+            <ul id="warningsList"></ul>
+          </section>
+          <p class="disclaimer">This estimate is for informational purposes and is not a medical diagnosis.</p>
+        </section>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
